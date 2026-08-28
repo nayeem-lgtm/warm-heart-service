@@ -102,6 +102,7 @@ export function generateLeaveRequests(today: Date): LeaveRequest[] {
               {
                 id: `fb-${n}`,
                 author: "HR Admin",
+                role: "admin",
                 text: "Team coverage is not available on these dates, please reschedule.",
                 at: applied.toISOString(),
               },

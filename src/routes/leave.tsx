@@ -308,6 +308,49 @@ function Page() {
     <AppShell>
       <PageHeader title="Leave" description="Review requests, track balances and keep an eye on who is off." />
 
+      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3">
+        <div className="inline-flex rounded-lg border border-border p-0.5">
+          {(["admin", "employee"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => {
+                setView(v);
+                setOpenId(null);
+                setComment("");
+              }}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {v === "admin" ? "Admin view" : "Employee view"}
+            </button>
+          ))}
+        </div>
+        {isEmployeeView && (
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            Viewing as
+            <select
+              value={me}
+              onChange={(e) => setMe(e.target.value)}
+              className="rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground"
+            >
+              {employeeOptions.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <p className="text-xs text-muted-foreground">
+          {isEmployeeView
+            ? "Employees can comment on their own requests and withdraw upcoming leave."
+            : "HR can decide requests and reply to employee comments."}
+        </p>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={Hourglass} label="Pending approval" value={stats.pending} caption="Awaiting a decision" highlight />
         <StatCard icon={Plane} label="Out today" value={stats.onLeave} caption="Currently on leave" />

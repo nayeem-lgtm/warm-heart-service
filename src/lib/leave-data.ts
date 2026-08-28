@@ -6,6 +6,7 @@ export type LeaveStatus = "Pending" | "Approved" | "Denied" | "Cancelled";
 export type LeaveFeedback = {
   id: string;
   author: string;
+  role?: "admin" | "employee";
   text: string;
   at: string;
 };

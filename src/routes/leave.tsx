@@ -124,7 +124,41 @@ function Page() {
     [rows, todayKey],
   );
 
+  const isEmployeeView = view === "employee";
+  const visibleRows = useMemo(
+    () => (isEmployeeView ? rows.filter((r) => r.employee === me) : rows),
+    [rows, isEmployeeView, me],
+  );
+
   const active = rows.find((r) => r.id === openId) ?? null;
+
+  /** an employee may withdraw a request that has not started yet and is not already closed */
+  const canWithdraw = (r: LeaveRequest) =>
+    (r.status === "Pending" || r.status === "Approved") && r.from > todayKey;
+
+  const withdraw = (id: string) => {
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === id
+          ? {
+              ...r,
+              status: "Cancelled",
+              feedback: [
+                ...r.feedback,
+                {
+                  id: `fb-${Date.now()}`,
+                  author: r.employee,
+                  role: "employee" as const,
+                  text: "Leave request withdrawn by the employee.",
+                  at: new Date().toISOString(),
+                },
+              ],
+            }
+          : r,
+      ),
+    );
+    toast.info("Leave request withdrawn");
+  };
 
   const decide = (id: string, status: "Approved" | "Denied") => {
     const note = comment.trim();

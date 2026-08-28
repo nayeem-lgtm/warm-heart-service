@@ -550,43 +550,69 @@ function Page() {
                   <div className="space-y-4 rounded-xl border border-border bg-card p-4">
                     <div>
                       <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">
-                        Note / comment for employee
+                        {isEmployeeView ? "Comment for HR" : "Comment for employee"}
                       </p>
                       <Textarea
                         value={comment}
                         onChange={(e) => setComment(e.target.value)}
-                        placeholder="Type a note for the employee…"
+                        placeholder={
+                          isEmployeeView ? "Reply to HR about this request…" : "Type a note for the employee…"
+                        }
                         rows={4}
                       />
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button variant="outline" disabled={!comment.trim()} onClick={() => postFeedback(active.id)}>
-                        Send note
+                        <MessageSquare className="size-4" /> Send comment
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {active.status === "Pending"
-                        ? "Any note typed above is attached to your decision."
-                        : `This request is ${active.status.toLowerCase()}. You can still add notes or reopen it.`}
+                      {isEmployeeView
+                        ? "HR can see your comments and will reply in this same thread."
+                        : active.status === "Pending"
+                          ? "Any note typed above is attached to your decision."
+                          : `This request is ${active.status.toLowerCase()}. You can still add comments or reopen it.`}
                     </p>
 
-
                     <div>
-                      <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">Feedback history</p>
+                      <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">Conversation</p>
                       {active.feedback.length ? (
                         <ul className="space-y-3">
-                          {active.feedback.map((f) => (
-                            <li key={f.id} className="rounded-lg border border-border bg-secondary/40 p-3">
-                              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                <span className="font-medium text-foreground">{f.author}</span>
-                                <span>{formatDateTime(f.at)}</span>
-                              </div>
-                              <p className="mt-1 text-sm text-foreground">{f.text}</p>
-                            </li>
-                          ))}
+                          {active.feedback.map((f) => {
+                            const isAdmin = (f.role ?? "admin") === "admin";
+                            return (
+                              <li
+                                key={f.id}
+                                className={cn(
+                                  "rounded-lg border p-3",
+                                  isAdmin
+                                    ? "border-border bg-secondary/40"
+                                    : "border-primary/30 bg-primary/10",
+                                )}
+                              >
+                                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                                  <span className="flex items-center gap-2">
+                                    <span className="font-medium text-foreground">{f.author}</span>
+                                    <span
+                                      className={cn(
+                                        "rounded-full border px-1.5 py-0.5 text-[10px] uppercase tracking-wide",
+                                        isAdmin
+                                          ? "border-border text-muted-foreground"
+                                          : "border-primary/40 text-primary",
+                                      )}
+                                    >
+                                      {isAdmin ? "HR" : "Employee"}
+                                    </span>
+                                  </span>
+                                  <span>{formatDateTime(f.at)}</span>
+                                </div>
+                                <p className="mt-1 text-sm text-foreground">{f.text}</p>
+                              </li>
+                            );
+                          })}
                         </ul>
                       ) : (
-                        <p className="text-sm text-muted-foreground">No feedback posted yet.</p>
+                        <p className="text-sm text-muted-foreground">No comments yet.</p>
                       )}
                     </div>
                   </div>

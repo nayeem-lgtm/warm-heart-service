@@ -6,8 +6,10 @@ import {
   CircleSlash,
   FileText,
   Hourglass,
+  MessageSquare,
   Paperclip,
   Plane,
+  Undo2,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -89,12 +91,16 @@ function Page() {
   const [rows, setRows] = useState<LeaveRequest[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
   const [comment, setComment] = useState("");
+  const [view, setView] = useState<"admin" | "employee">("admin");
+  const [me, setMe] = useState<string>("");
 
   useEffect(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     setToday(d);
-    setRows(generateLeaveRequests(d));
+    const generated = generateLeaveRequests(d);
+    setRows(generated);
+    setMe(generated[0]?.employee ?? "");
   }, []);
 
   const todayKey = today ? dateKey(today) : "";
@@ -120,7 +126,41 @@ function Page() {
     [rows, todayKey],
   );
 
+  const isEmployeeView = view === "employee";
+  const visibleRows = useMemo(
+    () => (isEmployeeView ? rows.filter((r) => r.employee === me) : rows),
+    [rows, isEmployeeView, me],
+  );
+
   const active = rows.find((r) => r.id === openId) ?? null;
+
+  /** an employee may withdraw a request that has not started yet and is not already closed */
+  const canWithdraw = (r: LeaveRequest) =>
+    (r.status === "Pending" || r.status === "Approved") && r.from > todayKey;
+
+  const withdraw = (id: string) => {
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === id
+          ? {
+              ...r,
+              status: "Cancelled",
+              feedback: [
+                ...r.feedback,
+                {
+                  id: `fb-${Date.now()}`,
+                  author: r.employee,
+                  role: "employee" as const,
+                  text: "Leave request withdrawn by the employee.",
+                  at: new Date().toISOString(),
+                },
+              ],
+            }
+          : r,
+      ),
+    );
+    toast.info("Leave request withdrawn");
+  };
 
   const decide = (id: string, status: "Approved" | "Denied") => {
     const note = comment.trim();
@@ -163,14 +203,20 @@ function Page() {
               ...r,
               feedback: [
                 ...r.feedback,
-                { id: `fb-${Date.now()}`, author: "HR Admin", text: comment.trim(), at: new Date().toISOString() },
+                {
+                  id: `fb-${Date.now()}`,
+                  author: isEmployeeView ? r.employee : "HR Admin",
+                  role: (isEmployeeView ? "employee" : "admin") as "employee" | "admin",
+                  text: comment.trim(),
+                  at: new Date().toISOString(),
+                },
               ],
             }
           : r,
       ),
     );
     setComment("");
-    toast.success("Note sent to the employee");
+    toast.success(isEmployeeView ? "Comment sent to HR" : "Comment sent to the employee");
   };
 
 
@@ -214,7 +260,25 @@ function Page() {
       key: "actions",
       header: "Actions",
       cell: (r) =>
-        r.status === "Pending" ? (
+        isEmployeeView ? (
+          <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+            {canWithdraw(r) && (
+              <Button size="sm" variant="destructive" onClick={() => withdraw(r.id)}>
+                <Undo2 className="size-3.5" /> Withdraw
+              </Button>
+            )}
+            <button
+              type="button"
+              className="text-xs text-primary hover:underline"
+              onClick={() => {
+                setOpenId(r.id);
+                setComment("");
+              }}
+            >
+              Comments
+            </button>
+          </div>
+        ) : r.status === "Pending" ? (
           <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             <Button size="sm" onClick={() => decide(r.id, "Approved")}>
               <Check className="size-3.5" /> Approve
@@ -245,6 +309,49 @@ function Page() {
   return (
     <AppShell>
       <PageHeader title="Leave" description="Review requests, track balances and keep an eye on who is off." />
+
+      <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3">
+        <div className="inline-flex rounded-lg border border-border p-0.5">
+          {(["admin", "employee"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => {
+                setView(v);
+                setOpenId(null);
+                setComment("");
+              }}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {v === "admin" ? "Admin view" : "Employee view"}
+            </button>
+          ))}
+        </div>
+        {isEmployeeView && (
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            Viewing as
+            <select
+              value={me}
+              onChange={(e) => setMe(e.target.value)}
+              className="rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground"
+            >
+              {employeeOptions.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <p className="text-xs text-muted-foreground">
+          {isEmployeeView
+            ? "Employees can comment on their own requests and withdraw upcoming leave."
+            : "HR can decide requests and reply to employee comments."}
+        </p>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={Hourglass} label="Pending approval" value={stats.pending} caption="Awaiting a decision" highlight />
@@ -298,7 +405,7 @@ function Page() {
 
       <div className="mt-6">
         <DataTable
-          data={rows}
+          data={visibleRows}
           columns={columns}
           onRowClick={(r) => {
             setOpenId(r.id);
@@ -336,7 +443,23 @@ function Page() {
                   </div>
                 </div>
 
-                {active.status === "Pending" ? (
+                {isEmployeeView ? (
+                  <div className="flex flex-col gap-4 rounded-xl border border-border bg-secondary/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Your request status</p>
+                      <div className="mt-1"><StatusPill status={active.status} /></div>
+                    </div>
+                    {canWithdraw(active) ? (
+                      <Button variant="destructive" onClick={() => withdraw(active.id)}>
+                        <Undo2 className="size-4" /> Withdraw request
+                      </Button>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Withdrawal is only possible before the leave start date.
+                      </p>
+                    )}
+                  </div>
+                ) : active.status === "Pending" ? (
                   <div className="flex flex-col gap-4 rounded-xl border border-warning/30 bg-warning/10 p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <div className="flex items-center gap-2">
@@ -429,43 +552,69 @@ function Page() {
                   <div className="space-y-4 rounded-xl border border-border bg-card p-4">
                     <div>
                       <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">
-                        Note / comment for employee
+                        {isEmployeeView ? "Comment for HR" : "Comment for employee"}
                       </p>
                       <Textarea
                         value={comment}
                         onChange={(e) => setComment(e.target.value)}
-                        placeholder="Type a note for the employee…"
+                        placeholder={
+                          isEmployeeView ? "Reply to HR about this request…" : "Type a note for the employee…"
+                        }
                         rows={4}
                       />
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button variant="outline" disabled={!comment.trim()} onClick={() => postFeedback(active.id)}>
-                        Send note
+                        <MessageSquare className="size-4" /> Send comment
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {active.status === "Pending"
-                        ? "Any note typed above is attached to your decision."
-                        : `This request is ${active.status.toLowerCase()}. You can still add notes or reopen it.`}
+                      {isEmployeeView
+                        ? "HR can see your comments and will reply in this same thread."
+                        : active.status === "Pending"
+                          ? "Any note typed above is attached to your decision."
+                          : `This request is ${active.status.toLowerCase()}. You can still add comments or reopen it.`}
                     </p>
 
-
                     <div>
-                      <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">Feedback history</p>
+                      <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">Conversation</p>
                       {active.feedback.length ? (
                         <ul className="space-y-3">
-                          {active.feedback.map((f) => (
-                            <li key={f.id} className="rounded-lg border border-border bg-secondary/40 p-3">
-                              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                <span className="font-medium text-foreground">{f.author}</span>
-                                <span>{formatDateTime(f.at)}</span>
-                              </div>
-                              <p className="mt-1 text-sm text-foreground">{f.text}</p>
-                            </li>
-                          ))}
+                          {active.feedback.map((f) => {
+                            const isAdmin = (f.role ?? "admin") === "admin";
+                            return (
+                              <li
+                                key={f.id}
+                                className={cn(
+                                  "rounded-lg border p-3",
+                                  isAdmin
+                                    ? "border-border bg-secondary/40"
+                                    : "border-primary/30 bg-primary/10",
+                                )}
+                              >
+                                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                                  <span className="flex items-center gap-2">
+                                    <span className="font-medium text-foreground">{f.author}</span>
+                                    <span
+                                      className={cn(
+                                        "rounded-full border px-1.5 py-0.5 text-[10px] uppercase tracking-wide",
+                                        isAdmin
+                                          ? "border-border text-muted-foreground"
+                                          : "border-primary/40 text-primary",
+                                      )}
+                                    >
+                                      {isAdmin ? "HR" : "Employee"}
+                                    </span>
+                                  </span>
+                                  <span>{formatDateTime(f.at)}</span>
+                                </div>
+                                <p className="mt-1 text-sm text-foreground">{f.text}</p>
+                              </li>
+                            );
+                          })}
                         </ul>
                       ) : (
-                        <p className="text-sm text-muted-foreground">No feedback posted yet.</p>
+                        <p className="text-sm text-muted-foreground">No comments yet.</p>
                       )}
                     </div>
                   </div>

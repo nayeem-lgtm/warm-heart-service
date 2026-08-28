@@ -6,6 +6,7 @@ export type LeaveStatus = "Pending" | "Approved" | "Denied" | "Cancelled";
 export type LeaveFeedback = {
   id: string;
   author: string;
+  role?: "admin" | "employee";
   text: string;
   at: string;
 };
@@ -101,6 +102,7 @@ export function generateLeaveRequests(today: Date): LeaveRequest[] {
               {
                 id: `fb-${n}`,
                 author: "HR Admin",
+                role: "admin",
                 text: "Team coverage is not available on these dates, please reschedule.",
                 at: applied.toISOString(),
               },

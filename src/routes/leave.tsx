@@ -403,7 +403,7 @@ function Page() {
 
       <div className="mt-6">
         <DataTable
-          data={rows}
+          data={visibleRows}
           columns={columns}
           onRowClick={(r) => {
             setOpenId(r.id);

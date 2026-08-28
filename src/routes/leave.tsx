@@ -96,7 +96,9 @@ function Page() {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     setToday(d);
-    setRows(generateLeaveRequests(d));
+    const generated = generateLeaveRequests(d);
+    setRows(generated);
+    setMe(generated[0]?.employee ?? "");
   }, []);
 
   const todayKey = today ? dateKey(today) : "";

@@ -201,14 +201,20 @@ function Page() {
               ...r,
               feedback: [
                 ...r.feedback,
-                { id: `fb-${Date.now()}`, author: "HR Admin", text: comment.trim(), at: new Date().toISOString() },
+                {
+                  id: `fb-${Date.now()}`,
+                  author: isEmployeeView ? r.employee : "HR Admin",
+                  role: (isEmployeeView ? "employee" : "admin") as "employee" | "admin",
+                  text: comment.trim(),
+                  at: new Date().toISOString(),
+                },
               ],
             }
           : r,
       ),
     );
     setComment("");
-    toast.success("Note sent to the employee");
+    toast.success(isEmployeeView ? "Comment sent to HR" : "Comment sent to the employee");
   };
 
 

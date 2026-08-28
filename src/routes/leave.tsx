@@ -441,7 +441,23 @@ function Page() {
                   </div>
                 </div>
 
-                {active.status === "Pending" ? (
+                {isEmployeeView ? (
+                  <div className="flex flex-col gap-4 rounded-xl border border-border bg-secondary/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Your request status</p>
+                      <div className="mt-1"><StatusPill status={active.status} /></div>
+                    </div>
+                    {canWithdraw(active) ? (
+                      <Button variant="destructive" onClick={() => withdraw(active.id)}>
+                        <Undo2 className="size-4" /> Withdraw request
+                      </Button>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Withdrawal is only possible before the leave start date.
+                      </p>
+                    )}
+                  </div>
+                ) : active.status === "Pending" ? (
                   <div className="flex flex-col gap-4 rounded-xl border border-warning/30 bg-warning/10 p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <div className="flex items-center gap-2">

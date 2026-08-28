@@ -258,7 +258,25 @@ function Page() {
       key: "actions",
       header: "Actions",
       cell: (r) =>
-        r.status === "Pending" ? (
+        isEmployeeView ? (
+          <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+            {canWithdraw(r) && (
+              <Button size="sm" variant="destructive" onClick={() => withdraw(r.id)}>
+                <Undo2 className="size-3.5" /> Withdraw
+              </Button>
+            )}
+            <button
+              type="button"
+              className="text-xs text-primary hover:underline"
+              onClick={() => {
+                setOpenId(r.id);
+                setComment("");
+              }}
+            >
+              Comments
+            </button>
+          </div>
+        ) : r.status === "Pending" ? (
           <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             <Button size="sm" onClick={() => decide(r.id, "Approved")}>
               <Check className="size-3.5" /> Approve

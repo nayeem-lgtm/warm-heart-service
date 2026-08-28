@@ -89,6 +89,8 @@ function Page() {
   const [rows, setRows] = useState<LeaveRequest[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
   const [comment, setComment] = useState("");
+  const [view, setView] = useState<"admin" | "employee">("admin");
+  const [me, setMe] = useState<string>("");
 
   useEffect(() => {
     const d = new Date();

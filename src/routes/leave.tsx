@@ -6,8 +6,10 @@ import {
   CircleSlash,
   FileText,
   Hourglass,
+  MessageSquare,
   Paperclip,
   Plane,
+  Undo2,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
